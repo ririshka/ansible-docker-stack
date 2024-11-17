@@ -1,0 +1,10 @@
+- name: Deploy Docker stack for .NET Core app
+  hosts: all
+  become: true
+  vars_files:
+    - roles/keys/vault.yml
+
+  roles:
+    - docker_setup
+    - dotnet_app
+    

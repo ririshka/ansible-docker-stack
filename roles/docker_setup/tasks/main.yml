@@ -1,0 +1,91 @@
+- name: Install required packages
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Create apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Download Docker's official GPG key
+  ansible.builtin.command:
+    cmd: curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  become: true
+  register: docker_key
+  ignore_errors: yes
+
+- name: Set permissions for Docker's GPG key
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+  become: true
+  when: docker_key is succeeded
+
+- name: Remove any conflicting docker repository and key files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /usr/share/keyrings/docker-archive-keyring.gpg
+    - /etc/apt/sources.list.d/docker.list
+  become: true
+
+- name: Add Docker repository to apt sources
+  ansible.builtin.shell: |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  become: true
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+  become: true
+
+- name: Install Docker packages
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+  become: true
+
+- name: Add user to Docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+  become: true
+
+- name: Ensure the directory for the .NET app exists
+  ansible.builtin.file:
+    path: /home/ubuntu/dotnet_app
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Copy Docker Compose file for .NET app
+  ansible.builtin.copy:
+    src: /templates/docker-compose.yml
+    dest: /home/ubuntu/dotnet_app/docker-compose.yml
+    mode: '0644'
+  become: true
+
+- name: Bring up the Docker Compose application
+  ansible.builtin.shell:
+    cmd: docker-compose up -d
+    chdir: /home/ubuntu/dotnet_app
+  become: true
+

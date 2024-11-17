@@ -1,0 +1,12 @@
+- name: Copy Docker Compose file for .NET app
+  ansible.builtin.copy:
+    src: files/docker-compose.yml
+    dest: /home/{{ ansible_user }}/dotnet_app/docker-compose.yml
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Start the .NET Core application with Docker Compose
+  ansible.builtin.command:
+    cmd: docker-compose up -d
+    chdir: /home/{{ ansible_user }}/dotnet_app

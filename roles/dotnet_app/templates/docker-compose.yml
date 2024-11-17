@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  web:
+    image: your_dotnet_app_image:latest  
+    ports:
+      - "5000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=db;Database=myappdb;User Id=myuser;Password=${DB_PASSWORD}  # Use environment variable for password
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: ${DB_PASSWORD}  
+      POSTGRES_DB: myappdb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
